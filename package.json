@@ -4,11 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && @opennextjs/cloudflare",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "cloudflare && wrangler deploy",
-    "preview": "cloudflare && wrangler dev",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv env.d.ts"
   },
   "dependencies": {
