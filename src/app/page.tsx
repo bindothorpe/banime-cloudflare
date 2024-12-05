@@ -3,7 +3,7 @@ import { TopCard } from "@/components/pages/home/top-card";
 import { HomeResponse } from "@/types/server/home-response";
 
 export default async function Home() {
-  const data = await fetch(process.env.API_BASE_URL + "/home");
+  const data = await fetch(process.env.NEXT_PUBLIC_API_URL + "/home");
   const results: HomeResponse = await data.json();
 
   return (
