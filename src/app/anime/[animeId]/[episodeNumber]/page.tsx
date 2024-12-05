@@ -4,7 +4,6 @@ import { AnimeInfoResponse } from "@/types/server/anime-info-response";
 import { Episode, EpisodesResponse } from "@/types/server/episode-response";
 import { ServerResponse } from "@/types/server/server-response";
 import { SourceResponse, Track } from "@/types/server/source-response";
-// import VideoPlayer from "@/components/player/video-player";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,6 +16,7 @@ import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import ShowMoreText from "@/components/pages/anime/shared/show-more-text";
 import AnimeSeasonsCombobox from "@/components/pages/anime/watch/anime-seasons-combobox";
+import VideoPlayer from "@/components/pages/anime/watch/video-player";
 
 type AnimeEpisodePageProps = Promise<{
   animeId: string;
@@ -85,7 +85,7 @@ export default async function AnimeEpisodePage(props: {
       </Breadcrumb>
 
       <div className="aspect-video w-full rounded-lg overflow-hidden mb-8">
-        {/* <VideoPlayer
+        <VideoPlayer
           option={{
             url: sourceResponse.data.sources[0].url,
             subtitle: {
@@ -105,7 +105,7 @@ export default async function AnimeEpisodePage(props: {
           }}
           sourceData={sourceResponse.data}
           className="w-full h-full"
-        /> */}
+        />
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-8">
