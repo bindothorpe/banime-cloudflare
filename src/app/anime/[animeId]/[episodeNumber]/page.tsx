@@ -53,7 +53,7 @@ export default async function AnimeEpisodePage(props: {
   if (!currentEpisode) return null;
 
   const serverResponse = await fetch(
-    `${process.env.API_BASE_URL}/episode/servers?animeEpisodeId=${currentEpisode.episodeId}`
+    `${process.env.NEXT_PUBLIC_API_URL}/episode/servers?animeEpisodeId=${currentEpisode.episodeId}`
   ).then((res) => res.json() as Promise<ServerResponse>);
 
   if (!serverResponse.success || serverResponse.data.sub.length === 0) {
@@ -61,7 +61,7 @@ export default async function AnimeEpisodePage(props: {
   }
 
   const sourceResponse = await fetch(
-    `${process.env.API_BASE_URL}/episode/sources?animeEpisodeId=${currentEpisode.episodeId}&server=${serverResponse.data.sub[0].serverName}&category=sub`
+    `${process.env.NEXT_PUBLIC_API_URL}/episode/sources?animeEpisodeId=${currentEpisode.episodeId}&server=${serverResponse.data.sub[0].serverName}&category=sub`
   ).then((res) => res.json() as Promise<SourceResponse>);
 
   if (!sourceResponse.success || !sourceResponse.data.sources[0]) {
