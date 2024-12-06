@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AnimeInfoResponse } from "@/types/server/anime-info-response";
 import { Episode, EpisodesResponse } from "@/types/server/episode-response";
 import { ServerResponse } from "@/types/server/server-response";
-import { SourceResponse, Track } from "@/types/server/source-response";
+import { SourceResponse } from "@/types/server/source-response";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,17 +22,20 @@ type AnimeEpisodePageProps = Promise<{
   animeId: string;
   episodeNumber: string;
 }>;
-
 export default async function AnimeEpisodePage(props: {
   params: AnimeEpisodePageProps;
 }) {
   const params = await props.params;
   const [animeResponse, episodesResponse] = await Promise.all([
-    fetch(process.env.NEXT_PUBLIC_API_URL + "/anime/" + params.animeId).then(
-      (res) => res.json() as Promise<AnimeInfoResponse>
-    ),
+    fetch(process.env.NEXT_PUBLIC_API_URL + "/api/anime/" + params.animeId, {
+      cache: "no-store",
+    }).then((res) => res.json() as Promise<AnimeInfoResponse>),
     fetch(
-      process.env.NEXT_PUBLIC_API_URL + "/anime/" + params.animeId + "/episodes"
+      process.env.NEXT_PUBLIC_API_URL +
+        "/api/anime/" +
+        params.animeId +
+        "/episodes",
+      { cache: "no-store" }
     ).then((res) => res.json() as Promise<EpisodesResponse>),
   ]);
 
@@ -40,7 +43,8 @@ export default async function AnimeEpisodePage(props: {
     "use server";
 
     const episodesResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/anime/${seasonId}/episodes`
+      `${process.env.NEXT_PUBLIC_API_URL}/api/anime/${seasonId}/episodes`,
+      { cache: "no-store" }
     ).then((res) => res.json() as Promise<EpisodesResponse>);
 
     return episodesResponse.data.episodes;
@@ -53,20 +57,33 @@ export default async function AnimeEpisodePage(props: {
   if (!currentEpisode) return null;
 
   const serverResponse = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/episode/servers?animeEpisodeId=${currentEpisode.episodeId}`
+    `${process.env.NEXT_PUBLIC_API_URL}/api/episode/servers?animeEpisodeId=${currentEpisode.episodeId}`,
+    { cache: "no-store" }
   ).then((res) => res.json() as Promise<ServerResponse>);
+
+  console.log("Fetching server response");
+  console.log(serverResponse);
+
+  console.log(serverResponse.data.sub);
 
   if (!serverResponse.success || serverResponse.data.sub.length === 0) {
     return <ErrorMessage message="No servers available" />;
   }
 
   const sourceResponse = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/episode/sources?animeEpisodeId=${currentEpisode.episodeId}&server=${serverResponse.data.sub[0].serverName}&category=sub`
+    `${process.env.NEXT_PUBLIC_API_URL}/api/episode/sources?animeEpisodeId=${currentEpisode.episodeId}&server=${serverResponse.data.sub[0].serverName}&category=sub`,
+    { cache: "no-store" }
   ).then((res) => res.json() as Promise<SourceResponse>);
+
+  console.log(sourceResponse);
 
   if (!sourceResponse.success || !sourceResponse.data.sources[0]) {
     return <ErrorMessage message="No source available" />;
   }
+
+  const subtitleUrl = sourceResponse.data.tracks.find(
+    (track) => track.default
+  )?.file;
 
   return (
     <div className="container mx-auto px-4">
@@ -89,9 +106,7 @@ export default async function AnimeEpisodePage(props: {
           option={{
             url: sourceResponse.data.sources[0].url,
             subtitle: {
-              url: sourceResponse.data.tracks.find(
-                (track: Track) => track.default == true
-              )?.file,
+              url: subtitleUrl,
               type: "vtt",
               encoding: "utf-8",
               escape: true,

@@ -10,10 +10,13 @@ type AnimePageProps = Promise<{ animeId: string }>;
 export default async function AnimePage(props: { params: AnimePageProps }) {
   const params = await props.params;
   const data = await fetch(
-    process.env.NEXT_PUBLIC_API_URL + "/anime/" + params.animeId
+    process.env.NEXT_PUBLIC_API_URL + "/api/anime/" + params.animeId
   );
   const episodesData = await fetch(
-    process.env.NEXT_PUBLIC_API_URL + "/anime/" + params.animeId + "/episodes"
+    process.env.NEXT_PUBLIC_API_URL +
+      "/api/anime/" +
+      params.animeId +
+      "/episodes"
   );
   const response: AnimeInfoResponse = await data.json();
   const episodesResponse: EpisodesResponse = await episodesData.json();

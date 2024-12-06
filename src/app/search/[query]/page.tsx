@@ -9,17 +9,19 @@ import { Anime, SearchResponse } from "@/types/server/search-response";
 import Image from "next/image";
 import Link from "next/link";
 
-type SearchPageProps = Promise<{ query: string }>;
+interface SearchPageProps {
+  params: {
+    query: string;
+  };
+}
 
-export default async function SearchPage(props: { params: SearchPageProps }) {
-  const params = await props.params;
+export default async function SearchPage({ params }: SearchPageProps) {
   const searchQuery = decodeURIComponent(params.query);
   const data = await fetch(
-    process.env.NEXT_PUBLIC_API_URL + "/search?q=" + searchQuery
+    `${process.env.NEXT_PUBLIC_API_URL}/api/search?q=${searchQuery}&page=1`,
+    { cache: "no-store" }
   );
   const response: SearchResponse = await data.json();
-
-  console.log(response);
 
   return (
     <div className="container mx-auto py-8 px-4">
