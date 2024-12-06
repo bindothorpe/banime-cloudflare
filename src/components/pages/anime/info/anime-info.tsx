@@ -38,16 +38,19 @@ function AnimeDetails({ anime }: AnimeInfoProps) {
         <span className="text-gray-500">Score:</span>
         <span>{anime.moreInfo.malscore}</span>
       </div>
-      <div>
-        <h3 className="font-medium mb-2">Genres</h3>
-        <div className="flex flex-wrap gap-1">
-          {anime.moreInfo.genres.map((genre) => (
-            <Badge key={genre} variant="secondary" className="text-xs">
-              {genre}
-            </Badge>
-          ))}
+      {anime.moreInfo.genres && (
+        <div>
+          <h3 className="font-medium mb-2">Genres</h3>
+          <div className="flex flex-wrap gap-1">
+            {anime.moreInfo.genres.map((genre) => (
+              <Badge key={genre} variant="secondary" className="text-xs">
+                {genre}
+              </Badge>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
       {anime.moreInfo.producers && (
         <div>
           <h3 className="font-medium mb-2">Producers</h3>
