@@ -18,64 +18,147 @@ import ShowMoreText from "@/components/pages/anime/shared/show-more-text";
 import AnimeSeasonsCombobox from "@/components/pages/anime/watch/anime-seasons-combobox";
 import VideoPlayer from "@/components/pages/anime/watch/video-player";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// API Functions
+async function getAnimeInfo(animeId: string) {
+  const response = await fetch(`${API_URL}/api/anime/${animeId}`, {
+    cache: "no-store",
+  });
+  return response.json() as Promise<AnimeInfoResponse>;
+}
+
+async function getAnimeEpisodes(animeId: string) {
+  const response = await fetch(`${API_URL}/api/anime/${animeId}/episodes`, {
+    cache: "no-store",
+  });
+  return response.json() as Promise<EpisodesResponse>;
+}
+
+async function getEpisodeServers(episodeId: string) {
+  const response = await fetch(
+    `${API_URL}/api/episode/servers?animeEpisodeId=${episodeId}`,
+    { cache: "no-store" }
+  );
+  return response.json() as Promise<ServerResponse>;
+}
+
+async function getEpisodeSources(episodeId: string, serverName: string) {
+  const response = await fetch(
+    `${API_URL}/api/episode/sources?animeEpisodeId=${episodeId}&server=${serverName}&category=sub`,
+    { cache: "no-store" }
+  );
+  return response.json() as Promise<SourceResponse>;
+}
+
+// Sub-components
+type EpisodeNavigationProps = {
+  animeId: string;
+  animeName: string;
+  episodeNumber: number;
+};
+
+function EpisodeNavigation({
+  animeId,
+  animeName,
+  episodeNumber,
+}: EpisodeNavigationProps) {
+  return (
+    <Breadcrumb className="mb-4">
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink href={`/anime/${animeId}`}>
+            {animeName}
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>Episode {episodeNumber}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+}
+
+type AnimeDetailsProps = {
+  name: string;
+  poster: string;
+  description: string;
+};
+
+function AnimeDetails({ name, poster, description }: AnimeDetailsProps) {
+  return (
+    <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="hidden md:block relative aspect-[3/4] w-full">
+        <Image
+          src={poster}
+          alt={name}
+          fill
+          className="rounded-lg object-cover"
+          sizes="(min-width: 768px) 33vw, 100vw"
+          priority
+        />
+      </div>
+      <div className="col-span-4 md:col-span-3 h-fit">
+        <h2 className="text-xl font-bold mb-4">{name}</h2>
+        <div className="text-gray-400">
+          <ShowMoreText text={description} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <Card className="bg-gray-900 border-none">
+        <CardContent className="p-6 text-center">
+          <h1 className="text-xl font-bold mb-2">Server Error</h1>
+          <p>{message}</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Main Component
 type AnimeEpisodePageProps = Promise<{
   animeId: string;
   episodeNumber: string;
 }>;
-export default async function AnimeEpisodePage(props: {
+
+export default async function AnimeEpisodePage({
+  params,
+}: {
   params: AnimeEpisodePageProps;
 }) {
-  const params = await props.params;
+  const resolvedParams = await params;
+
+  // Initial data fetch
   const [animeResponse, episodesResponse] = await Promise.all([
-    fetch(process.env.NEXT_PUBLIC_API_URL + "/api/anime/" + params.animeId, {
-      cache: "no-store",
-    }).then((res) => res.json() as Promise<AnimeInfoResponse>),
-    fetch(
-      process.env.NEXT_PUBLIC_API_URL +
-        "/api/anime/" +
-        params.animeId +
-        "/episodes",
-      { cache: "no-store" }
-    ).then((res) => res.json() as Promise<EpisodesResponse>),
+    getAnimeInfo(resolvedParams.animeId),
+    getAnimeEpisodes(resolvedParams.animeId),
   ]);
 
-  async function getEpisodes(seasonId: string) {
-    "use server";
-
-    const episodesResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/anime/${seasonId}/episodes`,
-      { cache: "no-store" }
-    ).then((res) => res.json() as Promise<EpisodesResponse>);
-
-    return episodesResponse.data.episodes;
-  }
-
   const currentEpisode = episodesResponse.data.episodes.find(
-    (episode: Episode) => episode.number === parseInt(params.episodeNumber)
+    (episode: Episode) =>
+      episode.number === parseInt(resolvedParams.episodeNumber)
   );
 
   if (!currentEpisode) return null;
 
-  const serverResponse = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/episode/servers?animeEpisodeId=${currentEpisode.episodeId}`,
-    { cache: "no-store" }
-  ).then((res) => res.json() as Promise<ServerResponse>);
-
-  console.log("Fetching server response");
-  console.log(serverResponse);
-
-  console.log(serverResponse.data.sub);
+  // Episode-specific data fetch
+  const serverResponse = await getEpisodeServers(currentEpisode.episodeId);
 
   if (!serverResponse.success || serverResponse.data.sub.length === 0) {
     return <ErrorMessage message="No servers available" />;
   }
 
-  const sourceResponse = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/episode/sources?animeEpisodeId=${currentEpisode.episodeId}&server=${serverResponse.data.sub[0].serverName}&category=sub`,
-    { cache: "no-store" }
-  ).then((res) => res.json() as Promise<SourceResponse>);
-
-  console.log(sourceResponse);
+  const sourceResponse = await getEpisodeSources(
+    currentEpisode.episodeId,
+    serverResponse.data.sub[0].serverName
+  );
 
   if (!sourceResponse.success || !sourceResponse.data.sources[0]) {
     return <ErrorMessage message="No source available" />;
@@ -85,21 +168,21 @@ export default async function AnimeEpisodePage(props: {
     (track) => track.default
   )?.file;
 
+  const { info } = animeResponse.data.anime;
+
+  async function getEpisodes(seasonId: string) {
+    "use server";
+    const response = await getAnimeEpisodes(seasonId);
+    return response.data.episodes;
+  }
+
   return (
     <div className="container mx-auto px-4">
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/anime/${animeResponse.data.anime.info.id}`}>
-              {animeResponse.data.anime.info.name}
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Episode {currentEpisode.number}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <EpisodeNavigation
+        animeId={info.id}
+        animeName={info.name}
+        episodeNumber={currentEpisode.number}
+      />
 
       <div className="aspect-video w-full rounded-lg overflow-hidden mb-8">
         <VideoPlayer
@@ -123,26 +206,11 @@ export default async function AnimeEpisodePage(props: {
         />
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="hidden md:block relative aspect-[3/4] w-full">
-          <Image
-            src={animeResponse.data.anime.info.poster}
-            alt={animeResponse.data.anime.info.name}
-            fill
-            className="rounded-lg object-cover"
-            sizes="(min-width: 768px) 33vw, 100vw"
-            priority
-          />
-        </div>
-        <div className="col-span-4 md:col-span-3 h-fit">
-          <h2 className="text-2xl font-bold mb-4">
-            {animeResponse.data.anime.info.name}
-          </h2>
-          <div className="text-gray-400">
-            <ShowMoreText text={animeResponse.data.anime.info.description} />
-          </div>
-        </div>
-      </div>
+      <AnimeDetails
+        name={info.name}
+        poster={info.poster}
+        description={info.description}
+      />
 
       <Separator className="mb-8" />
 
@@ -157,14 +225,3 @@ export default async function AnimeEpisodePage(props: {
     </div>
   );
 }
-
-const ErrorMessage = ({ message }: { message: string }) => (
-  <div className="flex items-center justify-center h-screen">
-    <Card className="bg-gray-900 border-none">
-      <CardContent className="p-6 text-center">
-        <h1 className="text-xl font-bold mb-2">Server Error</h1>
-        <p>{message}</p>
-      </CardContent>
-    </Card>
-  </div>
-);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import Artplayer from "artplayer";
 import Hls from "hls.js";
 import artplayerPluginHlsControl from "artplayer-plugin-hls-control";
@@ -33,6 +33,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 }) => {
   const artRef = useRef<Artplayer>();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const proxyUrl = useMemo(() => {
+    return (url: string) => {
+      if (url.startsWith("/api/proxy")) {
+        return url;
+      }
+      if (url.includes("netmagcdn")) {
+        return `/api/proxy?url=${encodeURIComponent(url)}`;
+      }
+      return url;
+    };
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -79,6 +91,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       autoPlayback: true,
       airplay: true,
       theme: "#FAFAFA",
+      moreVideoAttr: {
+        // crossOrigin: "anonymous",
+      },
       plugins: [
         artplayerPluginHlsControl({
           quality: {
@@ -106,7 +121,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           if (Hls.isSupported()) {
             if (art.hls) art.hls.destroy();
             const hls = new Hls();
-            hls.loadSource(url);
+            hls.loadSource(proxyUrl(url));
             hls.attachMedia(video);
             art.hls = hls;
             art.on("destroy", () => hls.destroy());
