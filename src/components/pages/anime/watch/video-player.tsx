@@ -187,7 +187,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Clean up added style
       style.remove();
     };
-  }, [option, getInstance, sourceData, controlsZIndex]);
+  }, [option, getInstance, sourceData, controlsZIndex, proxyUrl]);
 
   return <div ref={containerRef} className={className} />;
 };
