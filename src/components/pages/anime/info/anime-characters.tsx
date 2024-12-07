@@ -1,9 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { CharacterVoiceActor } from "@/types/server/anime-info-response";
+import { HiAnime } from "aniwatch";
 import Image from "next/image";
 
 interface AnimeCharactersProps {
-  characters: CharacterVoiceActor[];
+  characters: HiAnime.AnimeCharactersAndVoiceActors[];
 }
 
 export function AnimeCharacters({ characters }: AnimeCharactersProps) {

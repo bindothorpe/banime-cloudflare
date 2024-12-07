@@ -1,10 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnimeCharacters } from "./anime-characters";
 import { AnimeGridCard } from "./anime-grid-card";
-import { AnimeInfoData } from "@/types/server/anime-info-response";
+import { HiAnime } from "aniwatch";
 
 interface AnimeTabsProps {
-  data: AnimeInfoData;
+  data: HiAnime.ScrapedAnimeAboutInfo;
 }
 
 export function AnimeTabs({ data }: AnimeTabsProps) {
@@ -24,48 +24,54 @@ export function AnimeTabs({ data }: AnimeTabsProps) {
 
       <TabsContent value="characters" className="mt-4">
         <AnimeCharacters
-          characters={data.anime.info.charactersVoiceActors || []}
+          characters={data.anime.info.charactersVoiceActors ?? []}
         />
       </TabsContent>
 
       <TabsContent value="related" className="mt-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {data.relatedAnimes.map((anime) => (
-            <AnimeGridCard
-              key={anime.id}
-              id={anime.id}
-              name={anime.name}
-              poster={anime.poster}
-            />
-          ))}
+          {data.relatedAnimes
+            .filter((anime) => anime.id && anime.name && anime.poster)
+            .map((anime) => (
+              <AnimeGridCard
+                key={anime.id}
+                id={anime.id!}
+                name={anime.name!}
+                poster={anime.poster!}
+              />
+            ))}
         </div>
       </TabsContent>
 
       <TabsContent value="recommended" className="mt-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {data.recommendedAnimes.map((anime) => (
-            <AnimeGridCard
-              key={anime.id}
-              id={anime.id}
-              name={anime.name}
-              poster={anime.poster}
-            />
-          ))}
+          {data.recommendedAnimes
+            .filter((anime) => anime.id && anime.name && anime.poster)
+            .map((anime) => (
+              <AnimeGridCard
+                key={anime.id}
+                id={anime.id!}
+                name={anime.name!}
+                poster={anime.poster!}
+              />
+            ))}
         </div>
       </TabsContent>
 
       {data.seasons.length > 0 && (
         <TabsContent value="seasons" className="mt-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {data.seasons.map((season) => (
-              <AnimeGridCard
-                key={season.id}
-                id={season.id}
-                name={season.title}
-                poster={season.poster}
-                isCurrent={season.isCurrent}
-              />
-            ))}
+            {data.seasons
+              .filter((season) => season.id && season.title && season.poster)
+              .map((season) => (
+                <AnimeGridCard
+                  key={season.id}
+                  id={season.id!}
+                  name={season.title!}
+                  poster={season.poster!}
+                  isCurrent={season.isCurrent}
+                />
+              ))}
           </div>
         </TabsContent>
       )}

@@ -1,7 +1,6 @@
 "use client";
 
-import { Episode, EpisodesResponse } from "@/types/server/episode-response";
-import { AnimeInfoResponse } from "@/types/server/anime-info-response";
+import { HiAnime } from "aniwatch";
 import * as React from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,35 +19,37 @@ import {
 import { AnimeEpisodeGridButton } from "../shared/anime-episode-grid-button";
 
 type AnimeSeasonsComboboxProps = {
-  animeResponse: AnimeInfoResponse;
-  episodesResponse: EpisodesResponse;
-  onSeasonChange: (seasonId: string) => Promise<Episode[]>;
-  initialEpisodes: Episode[];
+  animeInfo: HiAnime.ScrapedAnimeAboutInfo;
+  episodes: HiAnime.ScrapedAnimeEpisodes;
+  onSeasonChange: (seasonId: string) => Promise<HiAnime.AnimeEpisode[]>;
+  initialEpisodes: HiAnime.AnimeEpisode[];
 };
 
 export default function AnimeSeasonsCombobox({
-  animeResponse,
-  episodesResponse,
+  animeInfo,
+  episodes,
   onSeasonChange,
   initialEpisodes,
 }: AnimeSeasonsComboboxProps) {
   const [open, setOpen] = React.useState(false);
-  const [episodes, setEpisodes] = React.useState(initialEpisodes);
+  const [currentEpisodes, setEpisodes] = React.useState(initialEpisodes);
   const [id, setId] = React.useState("");
 
-  const seasons = animeResponse.data.seasons.map((season) => ({
-    id: season.id,
-    label: season.title,
-  }));
+  const seasons = animeInfo.seasons
+    .filter((season) => season.id && season.title)
+    .map((season) => ({
+      id: season.id!,
+      label: season.title!,
+    }));
 
   React.useEffect(() => {
     if (seasons.length > 0 && !id) {
       setId(
-        seasons.find((season) => season.id === animeResponse.data.anime.info.id)
-          ?.id || seasons[0].id
+        seasons.find((season) => season.id === animeInfo.anime.info?.id)?.id ??
+          seasons[0].id
       );
     }
-  }, [seasons, id, animeResponse.data.anime.info.id]);
+  }, [seasons, id, animeInfo.anime.info?.id]);
 
   const handleSeasonChange = async (seasonId: string) => {
     const newEpisodes = await onSeasonChange(seasonId);
@@ -60,15 +61,17 @@ export default function AnimeSeasonsCombobox({
       <>
         <h3 className="text-xl font-bold mb-4">Episodes</h3>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-          {episodesResponse.data.episodes.map((episode: Episode) => (
-            <AnimeEpisodeGridButton
-              key={episode.number}
-              animeId={animeResponse.data.anime.info.id}
-              number={episode.number}
-              isCurrent={false}
-              isWatched={false}
-            />
-          ))}
+          {episodes.episodes
+            .filter((ep) => ep.episodeId)
+            .map((episode) => (
+              <AnimeEpisodeGridButton
+                key={episode.number}
+                animeId={animeInfo.anime.info?.id ?? ""}
+                number={episode.number}
+                isCurrent={false}
+                isWatched={false}
+              />
+            ))}
         </div>
       </>
     );
@@ -88,7 +91,8 @@ export default function AnimeSeasonsCombobox({
               >
                 <span className="truncate">
                   {id
-                    ? seasons.find((season) => season.id === id)?.label
+                    ? seasons.find((season) => season.id === id)?.label ??
+                      "Select season..."
                     : "Select season..."}
                 </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -120,15 +124,17 @@ export default function AnimeSeasonsCombobox({
         </div>
       </div>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-        {episodes.map((episode: Episode) => (
-          <AnimeEpisodeGridButton
-            key={episode.number}
-            animeId={id}
-            number={episode.number}
-            isCurrent={false}
-            isWatched={false}
-          />
-        ))}
+        {currentEpisodes
+          .filter((ep) => ep.episodeId)
+          .map((episode) => (
+            <AnimeEpisodeGridButton
+              key={episode.number}
+              animeId={id}
+              number={episode.number}
+              isCurrent={false}
+              isWatched={false}
+            />
+          ))}
       </div>
     </>
   );

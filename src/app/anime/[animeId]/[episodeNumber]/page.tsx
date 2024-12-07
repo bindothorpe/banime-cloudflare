@@ -1,9 +1,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { AnimeInfoResponse } from "@/types/server/anime-info-response";
-import { Episode, EpisodesResponse } from "@/types/server/episode-response";
-import { ServerResponse } from "@/types/server/server-response";
-import { SourceResponse } from "@/types/server/source-response";
+import { HiAnime } from "aniwatch";
+import { animeClient } from "@/lib/anime-client";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,45 +14,35 @@ import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import ShowMoreText from "@/components/pages/anime/shared/show-more-text";
 import AnimeSeasonsCombobox from "@/components/pages/anime/watch/anime-seasons-combobox";
-import VideoPlayer from "@/components/pages/anime/watch/video-player";
+import VideoPlayer, {
+  SourceData,
+} from "@/components/pages/anime/watch/video-player";
+import { ServerResponse } from "http";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-// API Functions
-async function getAnimeInfo(animeId: string) {
-  const response = await fetch(`${API_URL}/api/anime/${animeId}`, {
-    cache: "no-store",
-  });
-  return response.json() as Promise<AnimeInfoResponse>;
-}
-
-async function getAnimeEpisodes(animeId: string) {
-  const response = await fetch(`${API_URL}/api/anime/${animeId}/episodes`, {
-    cache: "no-store",
-  });
-  return response.json() as Promise<EpisodesResponse>;
-}
-
-async function getEpisodeServers(episodeId: string) {
-  const response = await fetch(
-    `${API_URL}/api/episode/servers?animeEpisodeId=${episodeId}`,
-    { cache: "no-store" }
-  );
-  return response.json() as Promise<ServerResponse>;
-}
-
-async function getEpisodeSources(episodeId: string, serverName: string) {
-  const response = await fetch(
-    `${API_URL}/api/episode/sources?animeEpisodeId=${episodeId}&server=${serverName}&category=sub`,
-    { cache: "no-store" }
-  );
-  return response.json() as Promise<SourceResponse>;
+function transformToSourceData(
+  sources: HiAnime.ScrapedAnimeEpisodesSources
+): SourceData {
+  return {
+    sources: sources.sources.map((source) => ({
+      url: source.url,
+      quality: source.quality,
+    })),
+    tracks:
+      sources.subtitles?.map((subtitle) => ({
+        file: subtitle.url,
+        kind: "subtitles",
+        label: subtitle.lang,
+        default: subtitle.lang === "English",
+      })) || [],
+    intro: sources.intro,
+    outro: undefined,
+  };
 }
 
 // Sub-components
 type EpisodeNavigationProps = {
-  animeId: string;
-  animeName: string;
+  animeId: string | null;
+  animeName: string | null;
   episodeNumber: number;
 };
 
@@ -63,6 +51,8 @@ function EpisodeNavigation({
   animeName,
   episodeNumber,
 }: EpisodeNavigationProps) {
+  if (!animeId || !animeName) return null;
+
   return (
     <Breadcrumb className="mb-4">
       <BreadcrumbList>
@@ -81,12 +71,14 @@ function EpisodeNavigation({
 }
 
 type AnimeDetailsProps = {
-  name: string;
-  poster: string;
-  description: string;
+  name: string | null;
+  poster: string | null;
+  description: string | null;
 };
 
 function AnimeDetails({ name, poster, description }: AnimeDetailsProps) {
+  if (!name || !poster) return null;
+
   return (
     <div className="grid grid-cols-4 gap-4 mb-8">
       <div className="hidden md:block relative aspect-[3/4] w-full">
@@ -101,9 +93,11 @@ function AnimeDetails({ name, poster, description }: AnimeDetailsProps) {
       </div>
       <div className="col-span-4 md:col-span-3 h-fit">
         <h2 className="text-xl font-bold mb-4">{name}</h2>
-        <div className="text-gray-400">
-          <ShowMoreText text={description} />
-        </div>
+        {description && (
+          <div className="text-gray-400">
+            <ShowMoreText text={description} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -136,44 +130,48 @@ export default async function AnimeEpisodePage({
   const resolvedParams = await params;
 
   // Initial data fetch
-  const [animeResponse, episodesResponse] = await Promise.all([
-    getAnimeInfo(resolvedParams.animeId),
-    getAnimeEpisodes(resolvedParams.animeId),
+  const [animeInfo, episodes] = await Promise.all([
+    animeClient.getAnimeInfo(resolvedParams.animeId),
+    animeClient.getEpisodes(resolvedParams.animeId),
   ]);
 
-  const currentEpisode = episodesResponse.data.episodes.find(
-    (episode: Episode) =>
-      episode.number === parseInt(resolvedParams.episodeNumber)
+  if (!animeInfo.anime?.info || !episodes.episodes) {
+    return <ErrorMessage message="Failed to load anime information" />;
+  }
+
+  const currentEpisode = episodes.episodes.find(
+    (episode) => episode.number === parseInt(resolvedParams.episodeNumber)
   );
 
-  if (!currentEpisode) return null;
+  if (!currentEpisode?.episodeId) {
+    return <ErrorMessage message="Episode not found" />;
+  }
 
   // Episode-specific data fetch
-  const serverResponse = await getEpisodeServers(currentEpisode.episodeId);
+  const servers = await animeClient.getEpisodeServers(currentEpisode.episodeId);
 
-  if (!serverResponse.success || serverResponse.data.sub.length === 0) {
+  if (!servers.sub || servers.sub.length === 0) {
     return <ErrorMessage message="No servers available" />;
   }
 
-  const sourceResponse = await getEpisodeSources(
+  const sources = await animeClient.getEpisodeSources(
     currentEpisode.episodeId,
-    serverResponse.data.sub[0].serverName
+    servers.sub[0].serverName as HiAnime.AnimeServers
   );
 
-  if (!sourceResponse.success || !sourceResponse.data.sources[0]) {
+  if (!sources.sources?.[0]) {
     return <ErrorMessage message="No source available" />;
   }
 
-  const subtitleUrl = sourceResponse.data.tracks.find(
-    (track) => track.default
-  )?.file;
+  const sourceData = transformToSourceData(sources);
+  const defaultTrack = sourceData.tracks.find((track) => track.default);
 
-  const { info } = animeResponse.data.anime;
+  const { info } = animeInfo.anime;
 
   async function getEpisodes(seasonId: string) {
     "use server";
-    const response = await getAnimeEpisodes(seasonId);
-    return response.data.episodes;
+    const seasonEpisodes = await animeClient.getEpisodes(seasonId);
+    return seasonEpisodes.episodes;
   }
 
   return (
@@ -187,21 +185,23 @@ export default async function AnimeEpisodePage({
       <div className="aspect-video w-full rounded-lg overflow-hidden mb-8">
         <VideoPlayer
           option={{
-            url: sourceResponse.data.sources[0].url,
-            subtitle: {
-              url: subtitleUrl,
-              type: "vtt",
-              encoding: "utf-8",
-              escape: true,
-              style: {
-                color: "#FFFFFF",
-                fontSize: "24px",
-              },
-            },
+            url: sources.sources[0].url,
+            subtitle: defaultTrack
+              ? {
+                  url: defaultTrack.file,
+                  type: "vtt",
+                  encoding: "utf-8",
+                  escape: true,
+                  style: {
+                    color: "#FFFFFF",
+                    fontSize: "24px",
+                  },
+                }
+              : undefined,
             subtitleOffset: true,
             setting: true,
           }}
-          sourceData={sourceResponse.data}
+          sourceData={sourceData}
           className="w-full h-full"
         />
       </div>
@@ -216,9 +216,9 @@ export default async function AnimeEpisodePage({
 
       <section className="pb-16">
         <AnimeSeasonsCombobox
-          animeResponse={animeResponse}
-          episodesResponse={episodesResponse}
-          initialEpisodes={episodesResponse.data.episodes}
+          animeInfo={animeInfo}
+          episodes={episodes}
+          initialEpisodes={episodes.episodes}
           onSeasonChange={getEpisodes}
         />
       </section>

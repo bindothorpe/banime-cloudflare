@@ -2,15 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Episodes } from "@/types/server/anime-shared";
+import { HiAnime } from "aniwatch";
 
 interface TopCardProps {
-  id: string;
-  name: string;
-  poster: string;
-  episodes?: Episodes;
-  type?: string;
-  rank?: number;
+  id: string | null;
+  name: string | null;
+  poster: string | null;
+  episodes?: {
+    sub: number | null;
+    dub: number | null;
+  };
+  type?: string | null;
+  rank?: number | null;
   aspectRatio?: string;
   orientation?: "vertical" | "horizontal";
 }
@@ -25,6 +28,8 @@ export function TopCard({
   aspectRatio = "aspect-[3/4]",
   orientation = "vertical",
 }: TopCardProps) {
+  if (!id || !name || !poster) return null;
+
   return (
     <Link href={`/anime/${id}`} className="contents">
       <Card
@@ -65,7 +70,7 @@ export function TopCard({
               )}
               {(episodes?.sub ?? 0) > 0 && (
                 <Badge variant="outline" className="text-xs">
-                  {episodes?.sub ?? 0} EP
+                  {episodes?.sub} EP
                 </Badge>
               )}
             </div>

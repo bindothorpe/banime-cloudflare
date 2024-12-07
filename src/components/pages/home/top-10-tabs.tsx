@@ -3,19 +3,19 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Top10Anime } from "@/types/server/home-response";
+import { HiAnime } from "aniwatch";
 import { TopCard } from "./top-card";
 
 interface Top10TabsProps {
-  today: Top10Anime[];
-  week: Top10Anime[];
-  month: Top10Anime[];
+  today: HiAnime.Top10Anime[];
+  week: HiAnime.Top10Anime[];
+  month: HiAnime.Top10Anime[];
 }
 
 export function Top10Tabs({ today, week, month }: Top10TabsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const getDisplayedAnimes = (animes: Top10Anime[]) => {
+  const getDisplayedAnimes = (animes: HiAnime.Top10Anime[]) => {
     return isExpanded ? animes : animes.slice(0, 5);
   };
 

@@ -6,14 +6,34 @@ import Hls from "hls.js";
 import artplayerPluginHlsControl from "artplayer-plugin-hls-control";
 import artplayerPluginChapter from "artplayer-plugin-chapter";
 import type { Option as ArtPlayerOption } from "artplayer/types/option";
-import { SourceData } from "@/types/server/source-response";
+
+export interface SourceData {
+  intro?: {
+    start: number;
+    end: number;
+  };
+  outro?: {
+    start: number;
+    end: number;
+  };
+  sources: Array<{
+    url: string;
+    quality?: string;
+  }>;
+  tracks: Array<{
+    file: string;
+    kind?: string;
+    label?: string;
+    default?: boolean;
+  }>;
+}
 
 interface VideoPlayerProps {
   option: Partial<ArtPlayerOption>;
-  sourceData?: SourceData;
+  sourceData: SourceData;
   getInstance?: (art: Artplayer) => void;
   className?: string;
-  controlsZIndex?: number; // New prop for controls z-index
+  controlsZIndex?: number;
 }
 
 interface Level {
@@ -29,7 +49,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   sourceData,
   getInstance,
   className,
-  controlsZIndex = 25, // Default z-index value
+  controlsZIndex = 25,
 }) => {
   const artRef = useRef<Artplayer>();
   const containerRef = useRef<HTMLDivElement>(null);

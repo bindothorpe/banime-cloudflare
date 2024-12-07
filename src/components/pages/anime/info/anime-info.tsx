@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { AnimeInfo as AnimeInfoType } from "@/types/server/anime-info-response";
+import { HiAnime } from "aniwatch";
 import {
   Accordion,
   AccordionContent,
@@ -10,10 +10,12 @@ import {
 } from "@/components/ui/accordion";
 
 interface AnimeInfoProps {
-  anime: AnimeInfoType;
+  anime: HiAnime.ScrapedAnimeAboutInfo["anime"];
 }
 
 function AnimeDetails({ anime }: AnimeInfoProps) {
+  if (!anime?.info || !anime?.moreInfo) return null;
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 text-sm">
@@ -21,9 +23,10 @@ function AnimeDetails({ anime }: AnimeInfoProps) {
         <span>{anime.info.stats.type}</span>
         <span className="text-gray-500">Episodes:</span>
         <span>
-          Sub: {anime.info.stats.episodes.sub}{" "}
-          {anime.info.stats.episodes.dub > 0 &&
-            `/ Dub: ${anime.info.stats.episodes.dub}`}
+          Sub: {anime.info.stats.episodes.sub}
+          {anime.info.stats.episodes.dub &&
+            anime.info.stats.episodes.dub > 0 &&
+            ` / Dub: ${anime.info.stats.episodes.dub}`}
         </span>
         <span className="text-gray-500">Status:</span>
         <span>{anime.moreInfo.status}</span>
@@ -38,42 +41,46 @@ function AnimeDetails({ anime }: AnimeInfoProps) {
         <span className="text-gray-500">Score:</span>
         <span>{anime.moreInfo.malscore}</span>
       </div>
-      {anime.moreInfo.genres && (
-        <div>
-          <h3 className="font-medium mb-2">Genres</h3>
-          <div className="flex flex-wrap gap-1">
-            {anime.moreInfo.genres.map((genre) => (
-              <Badge key={genre} variant="secondary" className="text-xs">
-                {genre}
-              </Badge>
-            ))}
+      {Array.isArray(anime.moreInfo.genres) &&
+        anime.moreInfo.genres.length > 0 && (
+          <div>
+            <h3 className="font-medium mb-2">Genres</h3>
+            <div className="flex flex-wrap gap-1">
+              {anime.moreInfo.genres.map((genre) => (
+                <Badge key={genre} variant="secondary" className="text-xs">
+                  {genre}
+                </Badge>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {anime.moreInfo.producers && (
-        <div>
-          <h3 className="font-medium mb-2">Producers</h3>
-          <div className="flex flex-wrap gap-1">
-            {anime.moreInfo.producers.map((producer) => (
-              <Badge key={producer} variant="outline" className="text-xs">
-                {producer}
-              </Badge>
-            ))}
+      {Array.isArray(anime.moreInfo.producers) &&
+        anime.moreInfo.producers.length > 0 && (
+          <div>
+            <h3 className="font-medium mb-2">Producers</h3>
+            <div className="flex flex-wrap gap-1">
+              {anime.moreInfo.producers.map((producer) => (
+                <Badge key={producer} variant="outline" className="text-xs">
+                  {producer}
+                </Badge>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
 
 export function AnimeInfo({ anime }: AnimeInfoProps) {
+  if (!anime?.info) return null;
+
   return (
     <div className="w-full">
       <div className="relative aspect-[3/4] w-full mb-8">
         <Image
-          src={anime.info.poster}
-          alt={anime.info.name}
+          src={anime.info.poster ?? ""}
+          alt={anime.info.name ?? ""}
           fill
           className="rounded-lg object-cover"
           sizes="(min-width: 768px) 33vw, 100vw"

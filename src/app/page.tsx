@@ -1,12 +1,19 @@
 import { Top10Tabs } from "@/components/pages/home/top-10-tabs";
 import { TopCard } from "@/components/pages/home/top-card";
-import { HomeResponse } from "@/types/server/home-response";
+import { animeClient } from "@/lib/anime-client";
+import { HiAnime } from "aniwatch";
 
 export default async function Home() {
-  const data = await fetch(process.env.NEXT_PUBLIC_API_URL + "/api/home", {
-    cache: "no-store",
-  });
-  const results: HomeResponse = await data.json();
+  const response: HiAnime.ScrapedHomePage | undefined =
+    await animeClient.getHomePage();
+
+  // You might want to handle the error case
+  if (!response) {
+    // Handle error - maybe return an error component
+    return <div>Failed to load home page</div>;
+  }
+
+  const results: HiAnime.ScrapedHomePage = response;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -17,16 +24,18 @@ export default async function Home() {
           <section>
             <h2 className="text-2xl font-bold mb-4">Latest Episodes</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
-              {results.data.latestEpisodeAnimes.map((anime) => (
-                <TopCard
-                  key={anime.id}
-                  id={anime.id}
-                  name={anime.name}
-                  poster={anime.poster}
-                  episodes={anime.episodes}
-                  type={anime.type}
-                />
-              ))}
+              {results.latestEpisodeAnimes
+                .filter((anime) => anime.id && anime.name && anime.poster)
+                .map((anime) => (
+                  <TopCard
+                    key={anime.id}
+                    id={anime.id}
+                    name={anime.name}
+                    poster={anime.poster}
+                    episodes={anime.episodes}
+                    type={anime.type}
+                  />
+                ))}
             </div>
           </section>
         </div>
@@ -37,7 +46,7 @@ export default async function Home() {
           <section>
             <h2 className="text-2xl font-bold mb-4">Top Airing</h2>
             <div className="grid grid-cols-1 gap-4">
-              {results.data.topAiringAnimes.slice(0, 5).map((anime) => (
+              {results.topAiringAnimes.slice(0, 5).map((anime) => (
                 <TopCard
                   key={anime.id}
                   id={anime.id}
@@ -55,9 +64,9 @@ export default async function Home() {
           <section>
             <h2 className="text-2xl font-bold mb-4">Top 10</h2>
             <Top10Tabs
-              today={results.data.top10Animes.today}
-              week={results.data.top10Animes.week}
-              month={results.data.top10Animes.month}
+              today={results.top10Animes.today}
+              week={results.top10Animes.week}
+              month={results.top10Animes.month}
             />
           </section>
         </div>
